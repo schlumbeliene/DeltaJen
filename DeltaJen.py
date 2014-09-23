@@ -370,11 +370,9 @@ class Edify(object):
         cmd += ');'
         return cmd
 
-    def extract(self, file_list):
-        """Extracts all files in file_list."""
-        cmd = 'package_extract_file('
-        cmd += ', '.join(['"%s", "/%s"' % (i, i) for i in file_list])
-        cmd += ');'
+    def extract(self, file):
+        """Extracts a file."""
+        cmd = 'package_extract_file("%s", "/%s");' % (file, file)
         return cmd
 
     def assert_device(self, device_list):
@@ -632,8 +630,13 @@ class DeltaJen(object):
         to_add = self.find_adds()
         if not to_add:
             return []
-        return [self.edify.ui_print("Extracting new files..."),
-                self.edify.extract(to_add)]
+
+        script = [self.edify.ui_print("Extracting new files...")]
+
+        for f_name in to_add:
+            script.append(self.edify.extract(f_name))
+
+        return script
 
     def patch_system(self, to_diff):
         """Generate edify commands for patching system, and return
