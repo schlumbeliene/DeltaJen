@@ -366,7 +366,14 @@ class Edify(object):
     def delete(self, file_list):
         """Delete all files in file_list."""
         cmd = 'delete('
-        cmd += ', '.join(['"%s"' % i for i in file_list])
+        cmd += ', '.join(['"/%s"' % i for i in file_list])
+        cmd += ');'
+        return cmd
+
+    def extract(self, file_list):
+        """Extracts all files in file_list."""
+        cmd = 'package_extract_file('
+        cmd += ', '.join(['"%s", "/%s"' % (i, i) for i in file_list])
         cmd += ');'
         return cmd
 
@@ -616,6 +623,18 @@ class DeltaJen(object):
         return [self.edify.ui_print("Removing files..."),
                 self.edify.delete(to_remove)]
 
+    def add_files(self):
+        """Generate edify commands for adding new files
+
+        Returns:
+            (list of str): List of commands for adding new files
+        """
+        to_add = self.find_adds()
+        if not to_add:
+            return []
+        return [self.edify.ui_print("Extracting new files..."),
+                self.edify.extract(to_add)]
+
     def patch_system(self, to_diff):
         """Generate edify commands for patching system, and return
         as a list
@@ -692,6 +711,7 @@ class DeltaJen(object):
         script.extend(self.hooks.pre_flash_script())
         script.extend(self.patch_system(to_diff))
         script.extend(self.delete_files())
+        script.extend(self.add_files())
         script.extend(self.symlink_files())
         script.extend(self.hooks.post_flash_script())
         script.extend(self.unmount_system())
@@ -789,6 +809,18 @@ class DeltaJen(object):
             if not self.input_ptr.get(f_name, None):
                 to_remove.append(f_name)
         return to_remove
+
+    def find_adds(self):
+        """Find files to be added to the system.
+
+        Returns:
+            to_add (list): list of all the files that need to be added.
+        """
+        to_add = []
+        for f_name in self.input_ptr.keys():
+            if not self.base_ptr.get(f_name, None):
+                to_add.append(f_name)
+        return to_add
 
     def compute_diff(self, b_file, n_file):
         """Create the patch.
